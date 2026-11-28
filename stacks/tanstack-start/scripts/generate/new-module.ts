@@ -27,7 +27,7 @@ import {
   writeAll,
 } from './lib.ts'
 import { addToE2eRoutes, pageFiles } from './page.ts'
-import { generateRoutes } from './routes.ts'
+import { refreshRouteTree } from './routes.ts'
 
 const COMPOSITION = 'src/server/composition.ts'
 const args = process.argv.slice(2)
@@ -49,7 +49,7 @@ const written = writeAll(files)
 wireComposition()
 const changed = [...written, COMPOSITION]
 if (withRoute) {
-  await generateRoutes()
+  await refreshRouteTree()
   changed.push(addToE2eRoutes(mod))
 }
 tidy(changed)

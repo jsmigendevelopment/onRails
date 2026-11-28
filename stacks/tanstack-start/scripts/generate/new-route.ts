@@ -3,7 +3,7 @@
 // it doesn't exist yet, src/modules/accounts/ui/views/profile-view.tsx.
 import { kebab, positional, report, requireModule, tidy, writeAll } from './lib.ts'
 import { addToE2eRoutes, pageFiles } from './page.ts'
-import { generateRoutes } from './routes.ts'
+import { refreshRouteTree } from './routes.ts'
 
 const [path, mod] = positional(process.argv.slice(2))
 if (!path || !mod) {
@@ -12,7 +12,7 @@ if (!path || !mod) {
 }
 requireModule(kebab(mod, 'The module'))
 const written = writeAll(pageFiles(path, mod))
-await generateRoutes()
+await refreshRouteTree()
 const routes = addToE2eRoutes(path)
 tidy([...written, routes])
 report(

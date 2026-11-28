@@ -39,14 +39,27 @@ export function singular(plural: string): string {
   )
 }
 
+/** `--dry`: every step below plans instead of acting; `report()` prints the plan. */
+export const DRY = process.argv.includes('--dry')
+const plan = { create: [] as string[], edit: [] as string[], run: [] as string[] }
+
+/** Notes a file an existing step would edit (under `--dry`, nothing is written). */
+export function planEdit(path: string) {
+  if (!plan.edit.includes(path)) plan.edit.push(path)
+}
+
 /** `--flag value` from the command line. */
 export function option(args: string[], flag: string): string | undefined {
   const at = args.indexOf(flag)
   return at === -1 ? undefined : args[at + 1]
 }
 
+// Flags that take the next word as their value. Every other `--flag` stands alone, so
+// `--dry tasks` and `tasks --dry` both leave `tasks` as the word.
+const VALUE_FLAGS = new Set(['--item'])
+
 export function positional(args: string[]): string[] {
-  return args.filter((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--'))
+  return args.filter((a, i) => !a.startsWith('--') && !VALUE_FLAGS.has(args[i - 1] ?? ''))
 }
 
 export type Tokens = Record<string, string>
@@ -112,6 +125,10 @@ export function tableTokens(withIndex: boolean): Tokens {
 export function writeAll(files: [string, string][]): string[] {
   const taken = files.filter(([path]) => existsSync(path)).map(([path]) => path)
   if (taken.length) fail(`Already there, nothing written:\n  ${taken.join('\n  ')}`)
+  if (DRY) {
+    plan.create.push(...files.map(([path]) => path))
+    return files.map(([path]) => path)
+  }
   for (const [path, text] of files) {
     mkdirSync(dirname(path), { recursive: true })
     writeFileSync(path, text)
@@ -124,6 +141,10 @@ export function edit(path: string, change: (text: string) => string) {
   const before = readFileSync(path, 'utf8')
   const after = change(before)
   if (after === before) fail(`Could not update ${path}: its shape changed. Add the lines by hand.`)
+  if (DRY) {
+    planEdit(path)
+    return
+  }
   writeFileSync(path, after)
 }
 
@@ -132,6 +153,10 @@ const pnpm = (args: string[]) =>
 
 /** Formats the new files and applies lint's own fixes (import order), so `pnpm check` passes. */
 export function tidy(paths: string[]) {
+  if (DRY) {
+    plan.run.push(`eslint --fix and prettier --write on ${paths.length} file(s)`)
+    return
+  }
   const code = paths.filter((p) => /\.(ts|tsx)$/.test(p))
   if (code.length) pnpm(['exec', 'eslint', '--fix', ...code])
   pnpm(['exec', 'prettier', '--write', '--log-level=warn', ...paths])
@@ -139,6 +164,10 @@ export function tidy(paths: string[]) {
 
 /** Writes the SQL migration for changed tables (drizzle-kit), named after what was added. */
 export function migrate(name: string) {
+  if (DRY) {
+    plan.run.push(`drizzle-kit generate --name ${name} (adds a SQL file to migrations/)`)
+    return
+  }
   pnpm(['exec', 'drizzle-kit', 'generate', '--name', name])
 }
 
@@ -152,8 +181,18 @@ export function requireModule(mod: string): string {
   return dir
 }
 
-/** Prints what was made and what to do next. */
+/** Prints what was made and what to do next, or under `--dry` what would be. */
 export function report(paths: string[], next: string[]) {
+  if (DRY) return reportPlan()
   console.log(`\nCreated or changed:\n  ${paths.join('\n  ')}`)
   if (next.length) console.log(`\nNext:\n  ${next.join('\n  ')}`)
+}
+
+function reportPlan() {
+  const list = (heading: string, items: string[]) =>
+    items.length ? `\n${heading}:\n  ${items.join('\n  ')}\n` : ''
+  console.log(
+    `Dry run: nothing was written.\n${list('Would create', plan.create)}${list('Would edit', plan.edit)}${list('Would run', plan.run)}` +
+      '\nRun it again without --dry to make these.',
+  )
 }

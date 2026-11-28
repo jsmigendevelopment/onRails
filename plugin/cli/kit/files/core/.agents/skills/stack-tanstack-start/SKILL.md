@@ -163,7 +163,7 @@ The owner's code style (`guide/code-style.md`, `guide/app-conventions.md`) is en
 | `pnpm new:component <module> <name>` | `ui/components/<name>.tsx` (props in, markup out) and its test |
 | `pnpm new:table <module> <name>` | `server/<name>.table.ts` with `id`, `created_at`, `updated_at` (snake_case table and columns, epoch-ms UTC) and its migration. Add columns, then `pnpm db:generate` |
 
-Names are kebab-case and a module is plural (`todo-items`; `--item` when the singular isn't the name minus "s"). Generators refuse to overwrite a file, run ESLint's fixes and Prettier on what they wrote, and `pnpm routes:generate` rebuilds the route tree on its own. A new page has no screenshot yet: run `pnpm test:visual --update --docker` and look at each new PNG before committing it.
+Names are kebab-case and a module is plural (`todo-items`; `--item` when the singular isn't the name minus "s"). Generators refuse to overwrite a file, run ESLint's fixes and Prettier on what they wrote, and `pnpm routes:generate` rebuilds the route tree on its own. Add `--dry` to any of them, before or after the words, to print the files it would create, the files it would edit and the tools it would run, and write nothing; it refuses for the same reasons the real run does. Run it first when the plan is not obvious. A new page has no screenshot yet: run `pnpm test:visual --update --docker` and look at each new PNG before committing it.
 
 **What fails the build, and where:**
 
